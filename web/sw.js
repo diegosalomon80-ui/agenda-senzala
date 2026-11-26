@@ -1,9 +1,9 @@
 /* Service worker: guarda só a "casca" do app (arquivos deste site).
  * Respostas da API e do login do Google (outras origens) nunca passam por aqui. */
-var CACHE = 'casca-v1';
+var CACHE = 'casca-v2';
 var ARQUIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'css/estilo.css',
-  'js/config.js', 'js/regras.js', 'js/sessao.js', 'js/api.js', 'js/app.js',
+  'js/config.js', 'js/regras.js', 'js/sessao.js', 'js/api.js', 'js/app.js', 'js/cadastro.js',
   'icons/icone-192.png', 'icons/icone-512.png', 'icons/icone-maskable-512.png', 'icons/apple-touch-icon.png'
 ];
 

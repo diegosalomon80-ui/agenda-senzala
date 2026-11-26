@@ -35,19 +35,20 @@ function montar(tratar) {
   w.Api = {
     chamar: (acao, dados) => {
       chamadas.push({ acao, dados });
-      return Promise.resolve(tratar(acao, dados));
+      // Como o cliente real: erro vira Promise rejeitada, nunca exceção síncrona.
+      return new Promise((resolve) => resolve(tratar(acao, dados)));
     }
   };
-  if (fs.existsSync(path.join(web, 'js/cadastro.js'))) w.eval(ler('js/cadastro.js'));
+  w.eval(ler('js/cadastro.js'));
   w.eval(ler('js/app.js'));
-  w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
+  // O jsdom dispara DOMContentLoaded sozinho logo depois; esperar() cobre isso.
   return { w, d: w.document, chamadas };
 }
 
 const listar = (extra) => () => ({ ok: true, versao: 'v1', alunos: ALUNOS, completos: 2, meta: 84,
   professores: ['Contramestre Pouca Telha', 'Hallwan Santos', 'Dani Pinguin'],
   turmas: ['Escola de Circo', 'Academia Pura Vida'], ...extra });
-const esperar = () => new Promise((r) => setTimeout(r, 20));
+const esperar = () => new Promise((r) => setTimeout(r, 50));
 const nomesVisiveis = (d) => [...d.querySelectorAll('#lista button')].map((b) => b.querySelector('span span').textContent);
 
 test('agenda: progresso, ordem alfabética e etiqueta de incompleto', async () => {
@@ -117,4 +118,191 @@ test('atualização envia a versão conhecida e mantém a busca digitada', async
   assert.equal(chamadas.at(-1).dados.versao, 'v1');
   assert.equal(busca.value, 'bru');
   assert.deepEqual(nomesVisiveis(d), ['Bruno Ficticio']);
+});
+
+// ---------- cadastro e meta ----------
+function preencher(w, d, valores) {
+  for (const [campo, valor] of Object.entries(valores)) {
+    const e = d.getElementById('c-' + campo);
+    e.value = valor;
+    e.dispatchEvent(new w.Event(e.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
+  }
+}
+const ADULTO = { nome: 'Novo Ficticio', nascimento: '1995-05-05', turma: 'Escola de Circo', professor: 'Dani Pinguin',
+  whatsapp: '43 99111 0010', emergenciaNome: 'Irmã Ficticia', emergenciaParentesco: 'Irmã', emergenciaWhatsapp: '(43) 99111-0011' };
+
+function comCadastro(respostaCadastrar) {
+  const fila = Array.isArray(respostaCadastrar) ? respostaCadastrar.slice() : null;
+  return montar((acao, dados) => {
+    if (acao === 'listar') return listar()();
+    if (acao === 'cadastrar') {
+      const r = fila ? fila.shift() : respostaCadastrar;
+      if (r instanceof Error) throw r;
+      return r;
+    }
+    if (acao === 'definirMeta') return dados.meta < 2 ? { ok: false, erro: 'dados_invalidos', campos: ['meta'] } : { ok: true, meta: dados.meta };
+  });
+}
+
+test('cadastro: salvar só habilita com ficha completa; menor pede responsável', async () => {
+  const { w, d } = comCadastro({ ok: true });
+  await esperar();
+  d.querySelector('[data-acao="novo"]').click();
+  assert.equal(d.getElementById('tela-cadastro').hidden, false);
+  const salvar = d.getElementById('c-salvar');
+  assert.equal(salvar.disabled, true);
+  preencher(w, d, ADULTO);
+  assert.equal(salvar.disabled, false);
+  assert.equal(d.getElementById('c-grupo-responsavel').hidden, true);
+  preencher(w, d, { nascimento: '2015-01-01', whatsapp: '' });
+  assert.equal(d.getElementById('c-grupo-responsavel').hidden, false);
+  assert.equal(salvar.disabled, true);
+  preencher(w, d, { responsavel: 'Mãe Ficticia', whatsappResponsavel: '43991110012' });
+  assert.equal(salvar.disabled, false);
+});
+
+test('cadastro ok: envia, avisa, volta para a agenda e limpa o formulário', async () => {
+  const { w, d, chamadas } = comCadastro({ ok: true, aluno: { linha: 9 } });
+  await esperar();
+  d.querySelector('[data-acao="novo"]').click();
+  preencher(w, d, ADULTO);
+  d.getElementById('form-cadastro').dispatchEvent(new w.Event('submit', { cancelable: true }));
+  await esperar();
+  const envio = chamadas.find((c) => c.acao === 'cadastrar');
+  assert.equal(envio.dados.aluno.nome, 'Novo Ficticio');
+  assert.equal(envio.dados.aluno.whatsapp, '43 99111 0010');
+  assert.equal(envio.dados.confirmarSemelhante, false);
+  assert.equal(d.getElementById('aviso').textContent, 'Cadastro salvo');
+  assert.equal(d.getElementById('tela-agenda').hidden, false);
+  assert.equal(d.getElementById('c-nome').value, '');
+});
+
+test('cadastro duplicado: avisa, oferece a ficha e não apaga o formulário', async () => {
+  const { w, d } = comCadastro({ ok: false, erro: 'duplicado', alunos: [ALUNOS[0]] });
+  await esperar();
+  d.querySelector('[data-acao="novo"]').click();
+  preencher(w, d, ADULTO);
+  d.getElementById('form-cadastro').dispatchEvent(new w.Event('submit', { cancelable: true }));
+  await esperar();
+  assert.match(d.getElementById('c-msg').textContent, /Este aluno já está cadastrado/);
+  assert.equal(d.getElementById('c-nome').value, 'Novo Ficticio');
+  d.querySelector('#c-msg button[data-linha="2"]').click();
+  assert.equal(d.getElementById('tela-ficha').hidden, false);
+});
+
+test('cadastro semelhante: confirmação reenvia com confirmarSemelhante', async () => {
+  const { w, d, chamadas } = comCadastro([{ ok: false, erro: 'semelhante', alunos: [ALUNOS[0]] }, { ok: true, aluno: { linha: 9 } }]);
+  await esperar();
+  d.querySelector('[data-acao="novo"]').click();
+  preencher(w, d, ADULTO);
+  d.getElementById('form-cadastro').dispatchEvent(new w.Event('submit', { cancelable: true }));
+  await esperar();
+  assert.match(d.getElementById('c-msg').textContent, /Bruno Ficticio/);
+  d.getElementById('c-confirmar').click();
+  await esperar();
+  const envios = chamadas.filter((c) => c.acao === 'cadastrar');
+  assert.equal(envios.length, 2);
+  assert.equal(envios[1].dados.confirmarSemelhante, true);
+  assert.equal(d.getElementById('aviso').textContent, 'Cadastro salvo');
+});
+
+test('cadastro sem conexão: mensagem e formulário preservado', async () => {
+  const { w, d } = comCadastro(new Error('rede'));
+  await esperar();
+  d.querySelector('[data-acao="novo"]').click();
+  preencher(w, d, ADULTO);
+  d.getElementById('form-cadastro').dispatchEvent(new w.Event('submit', { cancelable: true }));
+  await esperar();
+  assert.match(d.getElementById('c-msg').textContent, /Sem conexão/);
+  assert.equal(d.getElementById('c-emergenciaNome').value, 'Irmã Ficticia');
+  assert.equal(d.getElementById('c-salvar').disabled, false);
+});
+
+test('cadastro com dados_invalidos marca os campos', async () => {
+  const { w, d } = comCadastro({ ok: false, erro: 'dados_invalidos', campos: ['turma'] });
+  await esperar();
+  d.querySelector('[data-acao="novo"]').click();
+  preencher(w, d, ADULTO);
+  d.getElementById('form-cadastro').dispatchEvent(new w.Event('submit', { cancelable: true }));
+  await esperar();
+  assert.ok(d.getElementById('c-turma').closest('.campo').classList.contains('pendente'));
+});
+
+test('meta: recusa abaixo dos completos e salva valor válido', async () => {
+  const { w, d } = comCadastro({ ok: true });
+  await esperar();
+  d.getElementById('progresso').click();
+  assert.equal(d.getElementById('form-meta').hidden, false);
+  assert.equal(d.getElementById('campo-meta').value, '84');
+  d.getElementById('campo-meta').value = '1';
+  d.getElementById('form-meta').dispatchEvent(new w.Event('submit', { cancelable: true }));
+  await esperar();
+  assert.equal(d.getElementById('meta-msg').textContent, 'A meta não pode ser menor que os cadastros completos');
+  d.getElementById('campo-meta').value = '90';
+  d.getElementById('form-meta').dispatchEvent(new w.Event('submit', { cancelable: true }));
+  await esperar();
+  assert.equal(d.getElementById('progresso-meta').textContent, '90');
+  assert.equal(d.getElementById('form-meta').hidden, true);
+});
+
+test('toque duplo em salvar envia uma vez só', async () => {
+  const { w, d, chamadas } = comCadastro({ ok: true, aluno: { linha: 9 } });
+  await esperar();
+  d.querySelector('[data-acao="novo"]').click();
+  preencher(w, d, ADULTO);
+  const form = d.getElementById('form-cadastro');
+  form.dispatchEvent(new w.Event('submit', { cancelable: true }));
+  form.dispatchEvent(new w.Event('submit', { cancelable: true }));
+  await esperar();
+  assert.equal(chamadas.filter((c) => c.acao === 'cadastrar').length, 1);
+});
+
+test('marcação do servidor some só quando o campo é editado', async () => {
+  const { w, d } = comCadastro({ ok: false, erro: 'dados_invalidos', campos: ['turma'] });
+  await esperar();
+  d.querySelector('[data-acao="novo"]').click();
+  preencher(w, d, ADULTO);
+  d.getElementById('form-cadastro').dispatchEvent(new w.Event('submit', { cancelable: true }));
+  await esperar();
+  const caixa = d.getElementById('c-turma').closest('.campo');
+  preencher(w, d, { nome: 'Outro Nome' });
+  assert.ok(caixa.classList.contains('pendente'));
+  preencher(w, d, { turma: 'Academia Pura Vida' });
+  assert.ok(!caixa.classList.contains('pendente'));
+});
+
+test('token expirado no meio do cadastro: renova e salva sem perder nada (api.js real)', async () => {
+  const html = ler('index.html').replace(/<script[\s\S]*?<\/script>/g, '');
+  const w = new JSDOM(html, { runScripts: 'outside-only', url: 'https://exemplo.test/' }).window;
+  abertas.push(w);
+  const enviados = [];
+  let renovacoes = 0;
+  w.eval(ler('js/config.js'));
+  w.eval(ler('js/regras.js'));
+  w.CONFIG.API_URL = 'https://api.exemplo.test/exec';
+  w.Sessao = { iniciar: (cb) => cb(), token: () => (renovacoes ? 'novo' : 'velho'),
+    renovar: () => { renovacoes++; return Promise.resolve('novo'); }, sair: () => {} };
+  w.fetch = (url, opts) => {
+    const corpo = JSON.parse(opts.body);
+    enviados.push(corpo);
+    let resp;
+    if (corpo.idToken === 'velho' && corpo.acao === 'cadastrar') resp = { ok: false, erro: 'token_invalido' };
+    else if (corpo.acao === 'listar') resp = listar()();
+    else resp = { ok: true, aluno: { linha: 9 } };
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(resp) });
+  };
+  w.eval(ler('js/api.js'));
+  w.eval(ler('js/cadastro.js'));
+  w.eval(ler('js/app.js'));
+  const d = w.document;
+  await esperar();
+  d.querySelector('[data-acao="novo"]').click();
+  preencher(w, d, ADULTO);
+  d.getElementById('form-cadastro').dispatchEvent(new w.Event('submit', { cancelable: true }));
+  await esperar();
+  const cadastros = enviados.filter((c) => c.acao === 'cadastrar');
+  assert.deepEqual(cadastros.map((c) => c.idToken), ['velho', 'novo']);
+  assert.equal(cadastros[1].aluno.emergenciaNome, 'Irmã Ficticia');
+  assert.equal(renovacoes, 1);
+  assert.equal(d.getElementById('aviso').textContent, 'Cadastro salvo');
 });
