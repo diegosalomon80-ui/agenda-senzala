@@ -134,6 +134,15 @@ Depois, troque a propriedade `PLANILHA_ID` pelo ID da planilha oficial. O ID é 
 
 Edite a propriedade **`PROFESSORES_EMAILS`** no editor do Apps Script: acrescente ou remova o e-mail. A mudança vale **na próxima ação** do professor, sem reimplantar.
 
+### Login que fica salvo no celular
+
+Depois do primeiro "Entrar com Google", o celular **continua logado até o professor tocar em "Sair"**. Como funciona:
+- **No celular:** fica guardada só uma chave de sessão. Nenhum dado de aluno é salvo no aparelho.
+- **Na API:** fica guardado só o *hash* dessa chave, nas propriedades do script com prefixo `sessao:`. Quem lê as propriedades não consegue usar a chave.
+- **Tirar um professor:** remover o e-mail de `PROFESSORES_EMAILS` bloqueia na hora, mesmo com o login salvo no celular dele.
+- **Celular perdido ou emergência:** no editor do Apps Script, abra `Ferramentas.gs`, escolha a função **`derrubarTodasAsSessoes`** e clique em **Executar**. Todos os professores vão precisar entrar de novo.
+- **iPhone:** use o app **instalado na Tela de Início**. Se for usado só numa aba do Safari, o próprio iPhone pode apagar o login depois de cerca de 7 dias sem uso.
+
 ## 5. Mudar listas de professores ou turmas
 
 Edite `PROFESSORES_NOMES` ou `TURMAS`, com os nomes separados por `|`. Use exatamente a mesma grafia que aparece na planilha, porque os filtros comparam o texto exato.
