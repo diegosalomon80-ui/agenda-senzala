@@ -82,6 +82,34 @@ function contarCompletos(alunos, hoje) {
   return alunos.filter(function (a) { return cadastroCompleto(a, hoje); }).length;
 }
 
+function verificarDuplicata(novo, existentes) {
+  var nome = normalizarNome(novo.nome);
+  var data = String(novo.nascimento || '').trim();
+  var exatos = [], parecidos = [];
+  existentes.forEach(function (a) {
+    var mesmoNome = nome !== '' && normalizarNome(a.nome) === nome;
+    var mesmaData = data !== '' && String(a.nascimento || '').trim() === data;
+    if (mesmoNome && mesmaData) exatos.push(a);
+    else if (mesmoNome || mesmaData) parecidos.push(a);
+  });
+  if (exatos.length) return { tipo: 'duplicado', alunos: exatos };
+  if (parecidos.length) return { tipo: 'semelhante', alunos: parecidos };
+  return { tipo: 'nenhum', alunos: [] };
+}
+
+var COLLATOR = new Intl.Collator('pt-BR', { sensitivity: 'base' });
+
+function filtrarAlunos(alunos, filtro) {
+  filtro = filtro || {};
+  var busca = normalizarNome(filtro.busca);
+  return alunos.filter(function (a) {
+    if (busca && normalizarNome(a.nome).indexOf(busca) === -1) return false;
+    if (filtro.professor && a.professor !== filtro.professor) return false;
+    if (filtro.turma && a.turma !== filtro.turma) return false;
+    return true;
+  }).sort(function (x, y) { return COLLATOR.compare(x.nome, y.nome); });
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     normalizarNome: normalizarNome,
@@ -91,6 +119,8 @@ if (typeof module !== 'undefined') {
     ehMenor: ehMenor,
     camposFaltando: camposFaltando,
     cadastroCompleto: cadastroCompleto,
-    contarCompletos: contarCompletos
+    contarCompletos: contarCompletos,
+    verificarDuplicata: verificarDuplicata,
+    filtrarAlunos: filtrarAlunos
   };
 }
