@@ -107,8 +107,12 @@ var Sessao = (function () {
     prepararGoogle(function () { google.accounts.id.prompt(); });
   }
 
-  // A sessão deixou de valer: pede o Google de novo por cima da tela atual (nada é perdido).
-  function renovar() {
+  // A sessão "rejeitada" deixou de valer: pede o Google de novo por cima da tela atual (nada é perdido).
+  // Se outra chamada já trocou a chave, usa a nova; se a troca está em andamento, espera por ela.
+  function renovar(rejeitada) {
+    var atual = ler();
+    if (atual && rejeitada && atual !== rejeitada) return Promise.resolve(atual);
+    if (esperando.length) return new Promise(function (resolve) { esperando.push(resolve); });
     apagar();
     return new Promise(function (resolve) {
       esperando.push(resolve);

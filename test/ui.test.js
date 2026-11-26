@@ -413,3 +413,19 @@ test('sair avisa a API, apaga a sessão e desliga o login automático', async ()
   assert.equal(w.localStorage.getItem('agenda.sessao'), null);
   assert.equal(gis.desligado, true);
 });
+
+test('dois pedidos recusados ao mesmo tempo: um só login, e a sessão nova é mantida', async () => {
+  let derrubada = false;
+  const { w, enviados } = montarReal({ chave: 'A', responder: (corpo) => {
+    if (derrubada && corpo.sessao === 'A') return { ok: false, erro: 'sessao_invalida' };
+    return respostaPadrao(corpo);
+  } });
+  await esperar();
+  derrubada = true;
+  const [r1, r2] = await Promise.all([w.Api.chamar('listar', {}), w.Api.chamar('listar', {})]);
+  await esperar();
+  assert.equal(r1.ok, true);
+  assert.equal(r2.ok, true);
+  assert.equal(enviados.filter((c) => c.acao === 'entrar').length, 1);
+  assert.equal(w.localStorage.getItem('agenda.sessao'), 'nova-idt');
+});

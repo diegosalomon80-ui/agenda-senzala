@@ -92,8 +92,9 @@ function tratarRequisicao(corpo, deps) {
       if (corpo.sessao) deps.apagarSessao(corpo.sessao);
       return { ok: true };
     }
-    var email = identificar_(corpo, deps);
-    if (corpo.acao === 'entrar') return { ok: true, sessao: deps.criarSessao(email) };
+    // Sessão nova só com login do Google: uma sessão não gera cópias que sobrevivam ao "Sair".
+    if (corpo.acao === 'entrar') return { ok: true, sessao: deps.criarSessao(deps.verificarProfessor(corpo.idToken)) };
+    identificar_(corpo, deps);
     var acao = ACOES_[corpo.acao];
     if (!acao || !Object.prototype.hasOwnProperty.call(ACOES_, corpo.acao)) return invalido_(['acao']);
     return acao(corpo, deps);

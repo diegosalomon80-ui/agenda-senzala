@@ -198,3 +198,12 @@ test('sair apaga a sessão; sair de novo continua ok', () => {
   assert.deepEqual(tratarRequisicao({ acao: 'listar', sessao }, deps), { ok: false, erro: 'sessao_invalida' });
   assert.deepEqual(tratarRequisicao({ acao: 'sair', sessao }, deps), { ok: true });
 });
+
+test('entrar exige login do Google: uma sessão não gera outra (Sair encerra de verdade)', () => {
+  const { deps, sessoes } = comSessoes();
+  const { sessao } = tratarRequisicao({ acao: 'entrar', idToken: 'tok' }, deps);
+  const r = tratarRequisicao({ acao: 'entrar', sessao }, deps);
+  assert.equal(r.ok, false);
+  assert.equal(r.erro, 'nao_autorizado');
+  assert.equal(sessoes.size, 1);
+});

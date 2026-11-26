@@ -19,11 +19,13 @@ var Api = (function () {
   function chamar(acao, dados) {
     var token = Sessao.token();
     var obterToken = token ? Promise.resolve(token) : Sessao.renovar();
+    var enviada = null;
     return obterToken.then(function (t) {
+      enviada = t;
       return enviar(Object.assign({}, dados, { acao: acao, sessao: t }));
     }).then(function (resp) {
       if (resp.erro !== 'sessao_invalida' && resp.erro !== 'token_invalido') return resp;
-      return Sessao.renovar().then(function (nova) {
+      return Sessao.renovar(enviada).then(function (nova) {
         return enviar(Object.assign({}, dados, { acao: acao, sessao: nova }));
       });
     }).then(function (resp) {
