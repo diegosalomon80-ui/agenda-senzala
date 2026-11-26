@@ -286,7 +286,7 @@ test('token expirado no meio do cadastro: renova e salva sem perder nada (api.js
     const corpo = JSON.parse(opts.body);
     enviados.push(corpo);
     let resp;
-    if (corpo.idToken === 'velho' && corpo.acao === 'cadastrar') resp = { ok: false, erro: 'token_invalido' };
+    if (corpo.sessao === 'velho' && corpo.acao === 'cadastrar') resp = { ok: false, erro: 'token_invalido' };
     else if (corpo.acao === 'listar') resp = listar()();
     else resp = { ok: true, aluno: { linha: 9 } };
     return Promise.resolve({ ok: true, json: () => Promise.resolve(resp) });
@@ -301,7 +301,7 @@ test('token expirado no meio do cadastro: renova e salva sem perder nada (api.js
   d.getElementById('form-cadastro').dispatchEvent(new w.Event('submit', { cancelable: true }));
   await esperar();
   const cadastros = enviados.filter((c) => c.acao === 'cadastrar');
-  assert.deepEqual(cadastros.map((c) => c.idToken), ['velho', 'novo']);
+  assert.deepEqual(cadastros.map((c) => c.sessao), ['velho', 'novo']);
   assert.equal(cadastros[1].aluno.emergenciaNome, 'Irmã Ficticia');
   assert.equal(renovacoes, 1);
   assert.equal(d.getElementById('aviso').textContent, 'Cadastro salvo');
@@ -319,4 +319,97 @@ test('filtros incluem valores que só existem nos dados', async () => {
   prof.value = 'Professor Visitante';
   prof.dispatchEvent(new w.Event('change'));
   assert.deepEqual(nomesVisiveis(d), ['Visitante Teste']);
+});
+
+// ---------- sessão persistente (sessao.js e api.js reais) ----------
+const { VirtualConsole } = require('jsdom');
+
+function montarReal({ chave, storageQuebrado, responder }) {
+  const html = ler('index.html').replace(/<script[\s\S]*?<\/script>/g, '');
+  const w = new JSDOM(html, { runScripts: 'outside-only', url: 'https://agenda.exemplo.test/', virtualConsole: new VirtualConsole() }).window;
+  abertas.push(w);
+  if (storageQuebrado) Object.defineProperty(w, 'localStorage', { get() { throw new Error('SecurityError'); } });
+  else if (chave) w.localStorage.setItem('agenda.sessao', chave);
+  const enviados = [];
+  const gis = { proxima: 'idt', callback: null, desligado: false };
+  w.google = { accounts: { id: {
+    initialize: (cfg) => { gis.callback = cfg.callback; },
+    renderButton: () => {},
+    prompt: () => { setTimeout(() => gis.callback && gis.callback({ credential: gis.proxima }), 0); },
+    disableAutoSelect: () => { gis.desligado = true; }
+  } } };
+  w.fetch = (url, opts) => {
+    const corpo = JSON.parse(opts.body);
+    enviados.push(corpo);
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(responder(corpo)) });
+  };
+  w.eval(ler('js/config.js'));
+  w.CONFIG.API_URL = 'https://api.exemplo.test/exec';
+  w.CONFIG.CLIENT_ID = 'cliente.apps.googleusercontent.com';
+  for (const f of ['js/regras.js', 'js/sessao.js', 'js/api.js', 'js/cadastro.js', 'js/app.js']) w.eval(ler(f));
+  return { w, d: w.document, enviados, gis };
+}
+
+const respostaPadrao = (corpo) => {
+  if (corpo.acao === 'entrar') return { ok: true, sessao: 'nova-' + corpo.idToken };
+  if (corpo.acao === 'listar') return listar()();
+  return { ok: true };
+};
+
+test('com sessão guardada: abre direto na agenda, sem login e sem idToken', async () => {
+  const { d, enviados } = montarReal({ chave: 'abc', responder: respostaPadrao });
+  await esperar();
+  assert.equal(d.getElementById('tela-login').hidden, true);
+  assert.equal(d.getElementById('tela-agenda').hidden, false);
+  assert.equal(enviados[0].acao, 'listar');
+  assert.equal(enviados[0].sessao, 'abc');
+  assert.equal(enviados[0].idToken, undefined);
+});
+
+test('sem sessão: entra com Google, guarda a sessão e abre a agenda', async () => {
+  const { w, d, enviados } = montarReal({ responder: respostaPadrao });
+  await esperar();
+  assert.deepEqual(enviados[0], { acao: 'entrar', idToken: 'idt' });
+  assert.equal(w.localStorage.getItem('agenda.sessao'), 'nova-idt');
+  assert.equal(d.getElementById('tela-login').hidden, true);
+  assert.equal(enviados[1].acao, 'listar');
+  assert.equal(enviados[1].sessao, 'nova-idt');
+});
+
+test('sessão derrubada no meio do cadastro: entra de novo e salva sem perder o formulário', async () => {
+  let derrubada = true;
+  const { w, d, enviados, gis } = montarReal({ chave: 'velha', responder: (corpo) => {
+    if (corpo.acao === 'cadastrar' && corpo.sessao === 'velha' && derrubada) { derrubada = false; return { ok: false, erro: 'sessao_invalida' }; }
+    if (corpo.acao === 'cadastrar') return { ok: true, aluno: { linha: 9 } };
+    return respostaPadrao(corpo);
+  } });
+  gis.proxima = 'idt2';
+  await esperar();
+  d.querySelector('[data-acao="novo"]').click();
+  preencher(w, d, ADULTO);
+  d.getElementById('form-cadastro').dispatchEvent(new w.Event('submit', { cancelable: true }));
+  await esperar();
+  await esperar();
+  const cadastros = enviados.filter((c) => c.acao === 'cadastrar');
+  assert.deepEqual(cadastros.map((c) => c.sessao), ['velha', 'nova-idt2']);
+  assert.equal(cadastros[1].aluno.emergenciaNome, 'Irmã Ficticia');
+  assert.equal(w.localStorage.getItem('agenda.sessao'), 'nova-idt2');
+  assert.equal(d.getElementById('aviso').textContent, 'Cadastro salvo');
+});
+
+test('armazenamento bloqueado (modo privado): funciona com a sessão em memória', async () => {
+  const { d, enviados } = montarReal({ storageQuebrado: true, responder: respostaPadrao });
+  await esperar();
+  assert.equal(d.getElementById('tela-agenda').hidden, false);
+  assert.equal(enviados.find((c) => c.acao === 'listar').sessao, 'nova-idt');
+});
+
+test('sair avisa a API, apaga a sessão e desliga o login automático', async () => {
+  const { w, enviados, gis } = montarReal({ chave: 'abc', responder: respostaPadrao });
+  await esperar();
+  w.Sessao.sair();
+  await esperar();
+  assert.ok(enviados.some((c) => c.acao === 'sair' && c.sessao === 'abc'));
+  assert.equal(w.localStorage.getItem('agenda.sessao'), null);
+  assert.equal(gis.desligado, true);
 });

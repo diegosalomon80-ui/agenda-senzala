@@ -20,11 +20,11 @@ var Api = (function () {
     var token = Sessao.token();
     var obterToken = token ? Promise.resolve(token) : Sessao.renovar();
     return obterToken.then(function (t) {
-      return enviar(Object.assign({}, dados, { acao: acao, idToken: t }));
+      return enviar(Object.assign({}, dados, { acao: acao, sessao: t }));
     }).then(function (resp) {
-      if (resp.erro !== 'token_invalido') return resp;
-      return Sessao.renovar().then(function (novo) {
-        return enviar(Object.assign({}, dados, { acao: acao, idToken: novo }));
+      if (resp.erro !== 'sessao_invalida' && resp.erro !== 'token_invalido') return resp;
+      return Sessao.renovar().then(function (nova) {
+        return enviar(Object.assign({}, dados, { acao: acao, sessao: nova }));
       });
     }).then(function (resp) {
       if (resp.erro === 'nao_autorizado') {
