@@ -161,7 +161,7 @@ Se uma cota estourar, o app mostra "Não foi possível atualizar" até o dia seg
 
 ## 9. Cores
 
-As cores estão em `web/css/estilo.css` (`--verde`, `--vinho`, `--dourado`, `--papel`). Os valores atuais são **provisórios**: troque pelos do site da Senzala Londrina e confira o contraste.
+As cores e fontes em `web/css/estilo.css` vêm do site <https://www.senzalalondrina.com/>, das mesmas variáveis do CSS do site: verde `#123a30`, vinho `#80343a`, amarelo `#f3c943`, papel `#f5f1e8`, texto `#171b18`, títulos em Impact e texto em Arial. O contraste foi conferido (WCAG AA). Se o site mudar de cores, atualize as variáveis no topo do arquivo e regere os ícones em `web/icons/`.
 
 ## Desenvolvimento
 

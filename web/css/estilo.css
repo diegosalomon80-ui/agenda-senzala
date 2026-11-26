@@ -1,15 +1,20 @@
-/* Paleta provisória — trocar pelos valores do site Senzala Londrina quando informados. */
+/* Paleta do site senzalalondrina.com (variáveis --green, --red, --yellow, --paper, --ink do site).
+ * Contraste conferido (WCAG AA): texto/papel 15.4, papel/verde 11.1, verde/amarelo 7.9, vinho/papel 7.5. */
 :root {
-  --verde: #1f4d2b;
-  --verde-claro: #2d6a3e;
-  --vinho: #6b1e2e;
-  --dourado: #d4a017;
-  --papel: #f6f0e1;
-  --papel-escuro: #ece3cc;
-  --tinta: #1d1d1b;
-  --tinta-suave: #4a4639;
-  --borda: #cfc3a4;
+  --verde: #123a30;
+  --verde-claro: #1b5142;
+  --vinho: #80343a;
+  --dourado: #f3c943;
+  --papel: #f5f1e8;
+  --papel-claro: #fffdf8;
+  --papel-escuro: #ebe4d4;
+  --tinta: #171b18;
+  --tinta-suave: #50564f;
+  --borda: #171b1838;
+  --borda-campo: #7b8079;
   --erro: #9b1c1c;
+  --fonte-titulo: Impact, "Arial Narrow", "Liberation Sans Narrow", sans-serif;
+  --fonte-texto: Arial, Helvetica, sans-serif;
   --raio: 12px;
   --toque: 48px;
   font-size: 100%;
@@ -20,7 +25,7 @@
 html, body { margin: 0; }
 
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--fonte-texto);
   font-size: 1rem;
   line-height: 1.45;
   color: var(--tinta);
@@ -29,7 +34,10 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-h1, h2 { font-family: Georgia, "Times New Roman", serif; line-height: 1.2; }
+h1, h2 {
+  font-family: var(--fonte-titulo); font-weight: 400; text-transform: uppercase;
+  letter-spacing: .01em; line-height: 1.05;
+}
 
 [hidden] { display: none !important; }
 
@@ -37,7 +45,9 @@ h1, h2 { font-family: Georgia, "Times New Roman", serif; line-height: 1.2; }
   position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }
 
-:focus-visible { outline: 3px solid var(--dourado); outline-offset: 2px; }
+/* Foco: vinho sobre fundo claro, amarelo sobre fundo verde. */
+:focus-visible { outline: 3px solid var(--vinho); outline-offset: 2px; }
+.topo :focus-visible, .sobreposicao :focus-visible, .progresso:focus-visible { outline-color: var(--dourado); }
 
 /* Topo */
 .topo {
@@ -47,7 +57,7 @@ h1, h2 { font-family: Georgia, "Times New Roman", serif; line-height: 1.2; }
   background: var(--verde); color: var(--papel);
   border-bottom: 4px solid var(--dourado);
 }
-.topo-titulo { margin: 0; font-size: 1.25rem; }
+.topo-titulo { margin: 0; font-size: 1.5rem; }
 .topo-sair {
   min-height: var(--toque); padding: 0 .75rem; border: 0; background: transparent;
   color: var(--papel); font: inherit; text-decoration: underline; cursor: pointer;
@@ -57,13 +67,15 @@ main { max-width: 40rem; margin: 0 auto; padding: 1rem; }
 .tela > * + * { margin-top: 1rem; }
 
 /* Botões */
+/* Como no site: botão amarelo com texto verde, maiúsculas espaçadas. */
 .botao {
-  min-height: var(--toque); padding: 0 1.1rem; border: 0; border-radius: var(--raio);
-  background: var(--vinho); color: var(--papel); font: inherit; font-weight: 600; cursor: pointer;
+  min-height: var(--toque); padding: 0 1.1rem; border: 2px solid transparent; border-radius: var(--raio);
+  background: var(--vinho); color: var(--papel-claro); font: inherit; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em; font-size: .9rem; cursor: pointer;
 }
 .botao:disabled { opacity: .45; cursor: not-allowed; }
-.botao-principal { width: 100%; font-size: 1.1rem; }
-.botao-secundario { background: transparent; color: var(--vinho); border: 2px solid var(--vinho); }
+.botao-principal { width: 100%; font-size: 1rem; background: var(--dourado); color: var(--verde); border-color: var(--verde); }
+.botao-secundario { background: transparent; color: var(--vinho); border-color: var(--vinho); }
 .voltar {
   min-height: var(--toque); padding: 0; border: 0; background: none;
   color: var(--vinho); font: inherit; font-weight: 600; cursor: pointer;
@@ -78,7 +90,7 @@ main { max-width: 40rem; margin: 0 auto; padding: 1rem; }
   background: var(--verde); color: var(--papel); font: inherit;
 }
 .progresso-texto { display: block; font-size: 1.15rem; }
-.progresso-texto strong { font-size: 1.6rem; color: #fff; }
+.progresso-texto strong { font-family: var(--fonte-titulo); font-weight: 400; font-size: 2rem; color: var(--dourado); }
 .progresso-barra {
   display: block; height: 10px; margin: .6rem 0 .4rem; border-radius: 5px; background: var(--verde-claro); overflow: hidden;
 }
@@ -93,8 +105,8 @@ main { max-width: 40rem; margin: 0 auto; padding: 1rem; }
 /* Campos */
 input, select {
   min-height: var(--toque); width: 100%; padding: .5rem .75rem;
-  font: inherit; color: var(--tinta); background: #fff;
-  border: 2px solid var(--borda); border-radius: var(--raio);
+  font: inherit; color: var(--tinta); background: var(--papel-claro);
+  border: 2px solid var(--borda-campo); border-radius: var(--raio);
 }
 input:focus, select:focus { border-color: var(--verde); }
 
@@ -119,7 +131,7 @@ input:focus, select:focus { border-color: var(--verde); }
 
 /* Ficha */
 .ficha-nome { font-size: 1.6rem; margin: .25rem 0 0; }
-.bloco { padding: 1rem; border-radius: var(--raio); background: #fff; border: 1px solid var(--borda); }
+.bloco { padding: 1rem; border-radius: var(--raio); background: var(--papel-claro); border: 1px solid var(--borda); }
 .bloco + .bloco { margin-top: .75rem; }
 .bloco h3 { margin: 0 0 .25rem; font-size: .9rem; text-transform: uppercase; letter-spacing: .04em; color: var(--verde); }
 .bloco .valor { font-size: 1.1rem; margin: .1rem 0 .5rem; }
@@ -134,7 +146,9 @@ input:focus, select:focus { border-color: var(--verde); }
 
 /* Formulário de cadastro */
 #form-cadastro fieldset { border: 0; padding: 0; margin: 0 0 1.25rem; }
-#form-cadastro legend { font-family: Georgia, serif; font-size: 1.1rem; font-weight: 700; color: var(--verde); margin-bottom: .5rem; }
+#form-cadastro legend {
+  font-family: var(--fonte-titulo); font-size: 1.25rem; text-transform: uppercase; color: var(--verde); margin-bottom: .5rem;
+}
 .campo { margin-bottom: .75rem; }
 .campo label { display: block; font-weight: 600; margin-bottom: .25rem; }
 .campo .ajuda { display: block; font-size: .85rem; color: var(--tinta-suave); }
