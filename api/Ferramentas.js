@@ -41,6 +41,15 @@ function criarPlanilhaDeTeste() {
   console.log('Planilha de teste criada. ID: ' + planilha.getId() + ' — ' + planilha.getUrl());
 }
 
+// Emergência (ex.: celular perdido): obriga todos os professores a entrar de novo.
+function derrubarTodasAsSessoes() {
+  var props = PropertiesService.getScriptProperties();
+  var chaves = props.getKeys().filter(function (k) { return k.indexOf(PREFIXO_SESSAO) === 0; });
+  chaves.forEach(function (k) { props.deleteProperty(k); });
+  console.log('Sessões derrubadas: ' + chaves.length);
+  return chaves.length;
+}
+
 if (typeof module !== 'undefined') {
   module.exports = { dadosPlanilhaTeste: dadosPlanilhaTeste };
 }

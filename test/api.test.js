@@ -141,3 +141,60 @@ test('ação desconhecida e erro inesperado', () => {
     console.error = original;
   }
 });
+
+// ---------- sessões persistentes ----------
+function comSessoes(opcoes) {
+  const criado = criarDeps(opcoes);
+  const sessoes = new Map();
+  let chamadasGoogle = 0;
+  const verificar = criado.deps.verificarProfessor;
+  criado.deps.verificarProfessor = (t) => { chamadasGoogle++; return verificar(t); };
+  criado.deps.criarSessao = (email) => { const k = 'k'.repeat(63) + sessoes.size; sessoes.set(k, email); return k; };
+  criado.deps.lerSessao = (k) => (sessoes.has(k) ? sessoes.get(k) : null);
+  criado.deps.apagarSessao = (k) => { sessoes.delete(k); };
+  return { ...criado, sessoes, google: () => chamadasGoogle };
+}
+
+test('entrar devolve sessão do professor autorizado', () => {
+  const { deps, sessoes } = comSessoes();
+  const r = tratarRequisicao({ acao: 'entrar', idToken: 'tok' }, deps);
+  assert.equal(r.ok, true);
+  assert.equal(typeof r.sessao, 'string');
+  assert.equal(r.sessao.length, 64);
+  assert.equal(sessoes.get(r.sessao), 'prof@gmail.com');
+});
+
+test('entrar com e-mail não autorizado não cria sessão', () => {
+  const { deps, sessoes } = comSessoes();
+  assert.deepEqual(tratarRequisicao({ acao: 'entrar', idToken: 'outro' }, deps), { ok: false, erro: 'nao_autorizado' });
+  assert.equal(sessoes.size, 0);
+});
+
+test('listar com sessão válida não consulta o Google', () => {
+  const { deps, google } = comSessoes();
+  const { sessao } = tratarRequisicao({ acao: 'entrar', idToken: 'tok' }, deps);
+  const antes = google();
+  assert.equal(tratarRequisicao({ acao: 'listar', sessao }, deps).ok, true);
+  assert.equal(google(), antes);
+});
+
+test('sessão desconhecida devolve sessao_invalida', () => {
+  const { deps } = comSessoes();
+  assert.deepEqual(tratarRequisicao({ acao: 'listar', sessao: 'desconhecida' }, deps), { ok: false, erro: 'sessao_invalida' });
+});
+
+test('professor removido da lista perde o acesso mesmo com sessão', () => {
+  const { deps } = comSessoes();
+  const { sessao } = tratarRequisicao({ acao: 'entrar', idToken: 'tok' }, deps);
+  const config = deps.config;
+  deps.config = () => ({ ...config(), emails: [] });
+  assert.deepEqual(tratarRequisicao({ acao: 'listar', sessao }, deps), { ok: false, erro: 'nao_autorizado' });
+});
+
+test('sair apaga a sessão; sair de novo continua ok', () => {
+  const { deps } = comSessoes();
+  const { sessao } = tratarRequisicao({ acao: 'entrar', idToken: 'tok' }, deps);
+  assert.deepEqual(tratarRequisicao({ acao: 'sair', sessao }, deps), { ok: true });
+  assert.deepEqual(tratarRequisicao({ acao: 'listar', sessao }, deps), { ok: false, erro: 'sessao_invalida' });
+  assert.deepEqual(tratarRequisicao({ acao: 'sair', sessao }, deps), { ok: true });
+});

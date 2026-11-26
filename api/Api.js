@@ -75,10 +75,25 @@ function acaoDefinirMeta_(corpo, deps) {
 
 var ACOES_ = { listar: acaoListar_, cadastrar: acaoCadastrar_, definirMeta: acaoDefinirMeta_ };
 
+// Sessão guardada no app (preferida) ou ID token do Google. A lista de e-mails vale sempre.
+function identificar_(corpo, deps) {
+  if (corpo.sessao) {
+    var email = deps.lerSessao(corpo.sessao);
+    if (!email) throw new ErroApi('sessao_invalida');
+    return autorizarEmail(email, deps.config().emails);
+  }
+  return deps.verificarProfessor(corpo.idToken);
+}
+
 function tratarRequisicao(corpo, deps) {
   try {
     corpo = corpo || {};
-    deps.verificarProfessor(corpo.idToken);
+    if (corpo.acao === 'sair') {
+      if (corpo.sessao) deps.apagarSessao(corpo.sessao);
+      return { ok: true };
+    }
+    var email = identificar_(corpo, deps);
+    if (corpo.acao === 'entrar') return { ok: true, sessao: deps.criarSessao(email) };
     var acao = ACOES_[corpo.acao];
     if (!acao || !Object.prototype.hasOwnProperty.call(ACOES_, corpo.acao)) return invalido_(['acao']);
     return acao(corpo, deps);
@@ -92,6 +107,9 @@ function tratarRequisicao(corpo, deps) {
 function depsReais_() {
   return {
     verificarProfessor: verificarProfessor,
+    criarSessao: criarSessao,
+    lerSessao: lerSessao,
+    apagarSessao: apagarSessao,
     config: config,
     salvarMeta: salvarMeta,
     lerAlunos: lerAlunos,
