@@ -1,6 +1,6 @@
 /* Service worker: guarda só a "casca" do app (arquivos deste site).
  * Respostas da API e do login do Google (outras origens) nunca passam por aqui. */
-var CACHE = 'casca-v5';
+var CACHE = 'casca-v6';
 var ARQUIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'css/estilo.css',
   'js/config.js', 'js/regras.js', 'js/sessao.js', 'js/api.js', 'js/app.js', 'js/cadastro.js',
@@ -20,10 +20,11 @@ self.addEventListener('activate', function (e) {
 });
 
 // Rede primeiro (pega atualizações), cache como reserva. Só GET da própria origem.
+// cache: 'no-cache' faz o navegador conferir com o servidor em vez de usar a cópia de até 10 min do cache HTTP.
 self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
-  e.respondWith(fetch(req).then(function (resp) {
+  e.respondWith(fetch(req, { cache: 'no-cache' }).then(function (resp) {
     if (resp.ok) {
       var copia = resp.clone();
       caches.open(CACHE).then(function (c) { c.put(req, copia); });

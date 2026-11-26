@@ -47,3 +47,7 @@ test('config.js não contém segredo', () => {
   const cfg = ler('js/config.js');
   assert.doesNotMatch(cfg, /secret|AIza|PLANILHA/i);
 });
+
+test('service worker revalida com o servidor (não usa cópia velha do cache HTTP)', () => {
+  assert.match(ler('sw.js'), /fetch\(req, \{ cache: 'no-cache' \}\)/);
+});
