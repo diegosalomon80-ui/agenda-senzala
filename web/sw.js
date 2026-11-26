@@ -1,10 +1,10 @@
 /* Service worker: guarda só a "casca" do app (arquivos deste site).
  * Respostas da API e do login do Google (outras origens) nunca passam por aqui. */
-var CACHE = 'casca-v6';
+var CACHE = 'casca-v7';
 var ARQUIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'css/estilo.css',
   'js/config.js', 'js/regras.js', 'js/sessao.js', 'js/api.js', 'js/app.js', 'js/cadastro.js',
-  'icons/icone-192-logo.png', 'icons/icone-512-logo.png', 'icons/icone-maskable-512-logo.png', 'icons/apple-touch-icon-logo.png'
+  'icons/icone-192-logo.png', 'icons/icone-512-logo.png', 'icons/icone-maskable-512-logo.png', 'icons/apple-touch-icon-logo.png', 'icons/emblema-128.png'
 ];
 
 self.addEventListener('install', function (e) {

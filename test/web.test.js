@@ -51,3 +51,10 @@ test('config.js não contém segredo', () => {
 test('service worker revalida com o servidor (não usa cópia velha do cache HTTP)', () => {
   assert.match(ler('sw.js'), /fetch\(req, \{ cache: 'no-cache' \}\)/);
 });
+
+test('cabeçalho mostra o emblema do grupo, e ele funciona offline', () => {
+  const html = ler('index.html');
+  const topo = html.slice(html.indexOf('<header class="topo">'), html.indexOf('</header>'));
+  assert.match(topo, /<img[^>]+src="icons\/emblema-128\.png"/);
+  assert.match(ler('sw.js'), /'icons\/emblema-128\.png'/);
+});

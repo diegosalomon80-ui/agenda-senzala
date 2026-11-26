@@ -57,6 +57,8 @@ h1, h2 {
   background: var(--verde); color: var(--papel);
   border-bottom: 4px solid var(--dourado);
 }
+.topo-marca { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.topo-emblema { flex: none; width: 40px; height: 40px; }
 .topo-titulo { margin: 0; font-size: 1.5rem; }
 .topo-sair {
   min-height: var(--toque); padding: 0 .75rem; border: 0; background: transparent;
