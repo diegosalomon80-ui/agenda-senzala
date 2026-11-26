@@ -29,10 +29,68 @@ function linkWhatsApp(tel) {
   return n ? 'https://wa.me/55' + n.replace(/\D/g, '') : null;
 }
 
+var FUSO = 'America/Sao_Paulo';
+var CAMPOS_FICHA = ['nome', 'whatsapp', 'responsavel', 'whatsappResponsavel',
+  'emergenciaNome', 'emergenciaParentesco', 'emergenciaWhatsapp'];
+var CAMPOS_TELEFONE = { whatsapp: true, whatsappResponsavel: true, emergenciaWhatsapp: true };
+
+// Data civil (ano, mês, dia) de um instante no fuso de São Paulo.
+function dataCivil(instante) {
+  var partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: FUSO, year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(instante).split('-');
+  return { a: +partes[0], m: +partes[1], d: +partes[2] };
+}
+
+function idadeEm(nascimento, hoje) {
+  var r = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(nascimento == null ? '' : nascimento).trim());
+  if (!r) return null;
+  var a = +r[1], m = +r[2], d = +r[3];
+  var teste = new Date(Date.UTC(a, m - 1, d));
+  if (teste.getUTCFullYear() !== a || teste.getUTCMonth() !== m - 1 || teste.getUTCDate() !== d) return null;
+  var h = dataCivil(hoje);
+  var idade = h.a - a - ((h.m < m || (h.m === m && h.d < d)) ? 1 : 0);
+  return idade < 0 ? null : idade;
+}
+
+function ehMenor(nascimento, hoje) {
+  var idade = idadeEm(nascimento, hoje);
+  return idade !== null && idade < 18;
+}
+
+function preenchido(v) {
+  return String(v == null ? '' : v).trim() !== '';
+}
+
+function camposFaltando(aluno, hoje) {
+  var menor = ehMenor(aluno.nascimento, hoje);
+  return CAMPOS_FICHA.filter(function (campo) {
+    var v = aluno[campo];
+    var obrigatorio = campo === 'whatsapp' ? !menor
+      : (campo === 'responsavel' || campo === 'whatsappResponsavel') ? menor
+      : true;
+    if (!preenchido(v)) return obrigatorio;
+    return CAMPOS_TELEFONE[campo] ? normalizarTelefone(v) === null : false;
+  });
+}
+
+function cadastroCompleto(aluno, hoje) {
+  return camposFaltando(aluno, hoje).length === 0;
+}
+
+function contarCompletos(alunos, hoje) {
+  return alunos.filter(function (a) { return cadastroCompleto(a, hoje); }).length;
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     normalizarNome: normalizarNome,
     normalizarTelefone: normalizarTelefone,
-    linkWhatsApp: linkWhatsApp
+    linkWhatsApp: linkWhatsApp,
+    idadeEm: idadeEm,
+    ehMenor: ehMenor,
+    camposFaltando: camposFaltando,
+    cadastroCompleto: cadastroCompleto,
+    contarCompletos: contarCompletos
   };
 }
