@@ -107,6 +107,16 @@ var App = (function () {
     select.value = opcoes.indexOf(atual) !== -1 ? atual : '';
   }
 
+  // Lista configurada + valores que aparecem na planilha e não estão nela (spec: "valores vindos dos dados").
+  function comValoresDosDados(lista, campo) {
+    var extras = [];
+    estado.alunos.forEach(function (a) {
+      var v = a[campo];
+      if (v && lista.indexOf(v) === -1 && extras.indexOf(v) === -1) extras.push(v);
+    });
+    return lista.concat(extras.sort(function (x, y) { return x.localeCompare(y, 'pt-BR'); }));
+  }
+
   function renderProgresso() {
     var p = resumoProgresso(estado.completos, estado.meta);
     $('progresso-completos').textContent = estado.completos;
@@ -138,8 +148,8 @@ var App = (function () {
 
   function renderAgenda() {
     renderProgresso();
-    preencherSelect($('filtro-professor'), estado.professores, 'Todos');
-    preencherSelect($('filtro-turma'), estado.turmas, 'Todas');
+    preencherSelect($('filtro-professor'), comValoresDosDados(estado.professores, 'professor'), 'Todos');
+    preencherSelect($('filtro-turma'), comValoresDosDados(estado.turmas, 'turma'), 'Todas');
     estado.filtro.professor = $('filtro-professor').value;
     estado.filtro.turma = $('filtro-turma').value;
     renderLista();

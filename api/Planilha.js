@@ -33,21 +33,24 @@ function mapearCabecalhos(cabecalhos) {
   return mapa;
 }
 
-function formatarData_(d) {
-  if (typeof Utilities !== 'undefined') return Utilities.formatDate(d, 'America/Sao_Paulo', 'yyyy-MM-dd');
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit'
-  }).format(d);
+// O Sheets devolve células de data como meia-noite NO FUSO DA PLANILHA: formatar nesse fuso.
+function formatarData_(d, fuso) {
+  if (typeof Utilities !== 'undefined') return Utilities.formatDate(d, fuso, 'yyyy-MM-dd');
+  var p = {};
+  new Intl.DateTimeFormat('en-CA', { timeZone: fuso, year: 'numeric', month: '2-digit', day: '2-digit' })
+    .formatToParts(d).forEach(function (x) { p[x.type] = x.value; });
+  return p.year + '-' + p.month + '-' + p.day;
 }
 
-function celulaParaTexto_(v) {
-  if (v instanceof Date) return formatarData_(v);
+function celulaParaTexto_(v, fuso) {
+  if (v instanceof Date) return formatarData_(v, fuso);
   return String(v == null ? '' : v).trim();
 }
 
-function linhaParaAluno(valores, mapa, numeroLinha) {
+function linhaParaAluno(valores, mapa, numeroLinha, fuso) {
+  fuso = fuso || 'America/Sao_Paulo';
   var aluno = { linha: numeroLinha };
-  CAMPOS_ALUNO.forEach(function (campo) { aluno[campo] = celulaParaTexto_(valores[mapa[campo]]); });
+  CAMPOS_ALUNO.forEach(function (campo) { aluno[campo] = celulaParaTexto_(valores[mapa[campo]], fuso); });
   return aluno;
 }
 
@@ -62,7 +65,7 @@ function alunoParaLinha(aluno, mapa, totalColunas, carimbo) {
   for (var i = 0; i < totalColunas; i++) linha.push('');
   CAMPOS_ALUNO.forEach(function (campo) { linha[mapa[campo]] = textoSeguro_(aluno[campo]); });
   if (aluno.nascimento) linha[mapa.nascimento] = "'" + aluno.nascimento;
-  linha[mapa.ultimaAtualizacao] = carimbo;
+  linha[mapa.ultimaAtualizacao] = "'" + carimbo; // texto exato; impede o Sheets de reinterpretar dia/mês
   linha[mapa.origem] = ORIGEM_APP;
   linha[mapa.situacao] = SITUACAO_APP;
   return linha;
@@ -75,11 +78,13 @@ function abaAlunos_() {
 }
 
 function lerAlunos() {
-  var valores = abaAlunos_().getDataRange().getValues();
+  var aba = abaAlunos_();
+  var fuso = aba.getParent().getSpreadsheetTimeZone();
+  var valores = aba.getDataRange().getValues();
   var mapa = mapearCabecalhos(valores[0]);
   var alunos = [];
   for (var i = 1; i < valores.length; i++) {
-    var aluno = linhaParaAluno(valores[i], mapa, i + 1);
+    var aluno = linhaParaAluno(valores[i], mapa, i + 1, fuso);
     if (aluno.nome !== '') alunos.push(aluno);
   }
   return alunos;

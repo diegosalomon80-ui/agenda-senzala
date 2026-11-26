@@ -306,3 +306,17 @@ test('token expirado no meio do cadastro: renova e salva sem perder nada (api.js
   assert.equal(renovacoes, 1);
   assert.equal(d.getElementById('aviso').textContent, 'Cadastro salvo');
 });
+
+test('filtros incluem valores que só existem nos dados', async () => {
+  const extra = { ...ALUNOS[0], linha: 9, nome: 'Visitante Teste', professor: 'Professor Visitante', turma: 'Turma Nova' };
+  const { w, d } = montar(listar({ alunos: [...ALUNOS, extra] }));
+  await esperar();
+  const opcoes = (id) => [...d.getElementById(id).options].map((o) => o.value);
+  assert.ok(opcoes('filtro-professor').includes('Professor Visitante'));
+  assert.ok(opcoes('filtro-turma').includes('Turma Nova'));
+  assert.equal(opcoes('filtro-professor').filter((v) => v === 'Dani Pinguin').length, 1);
+  const prof = d.getElementById('filtro-professor');
+  prof.value = 'Professor Visitante';
+  prof.dispatchEvent(new w.Event('change'));
+  assert.deepEqual(nomesVisiveis(d), ['Visitante Teste']);
+});

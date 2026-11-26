@@ -35,11 +35,16 @@ var CAMPOS_FICHA = ['nome', 'whatsapp', 'responsavel', 'whatsappResponsavel',
 var CAMPOS_TELEFONE = { whatsapp: true, whatsappResponsavel: true, emergenciaWhatsapp: true };
 
 // Data civil (ano, mês, dia) de um instante no fuso de São Paulo.
+var FORMATO_DATA_SP = null;
 function dataCivil(instante) {
-  var partes = new Intl.DateTimeFormat('en-CA', {
-    timeZone: FUSO, year: 'numeric', month: '2-digit', day: '2-digit'
-  }).format(instante).split('-');
-  return { a: +partes[0], m: +partes[1], d: +partes[2] };
+  if (!FORMATO_DATA_SP) {
+    FORMATO_DATA_SP = new Intl.DateTimeFormat('en-CA', {
+      timeZone: FUSO, year: 'numeric', month: '2-digit', day: '2-digit'
+    });
+  }
+  var p = {};
+  FORMATO_DATA_SP.formatToParts(instante).forEach(function (x) { p[x.type] = x.value; });
+  return { a: +p.year, m: +p.month, d: +p.day };
 }
 
 function idadeEm(nascimento, hoje) {

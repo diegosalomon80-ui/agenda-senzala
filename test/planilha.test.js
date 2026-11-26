@@ -54,7 +54,7 @@ test('alunoParaLinha preenche só o permitido', () => {
   assert.equal(l.length, 22);
   assert.equal(l[m.origem], 'App professores');
   assert.equal(l[m.situacao], 'Cadastro para confirmar');
-  assert.equal(l[m.ultimaAtualizacao], '26/11/2026 10:00:00');
+  assert.equal(l[m.ultimaAtualizacao], "'26/11/2026 10:00:00");
   assert.equal(l[idx('Nome completo')], 'Teste da Silva');
   assert.equal(l[idx('Data de nascimento')], "'2015-05-05");
   assert.equal(l[idx('ID do envio do site')], '');
@@ -77,4 +77,16 @@ test('montarConfig: padrões e listas', () => {
   assert.deepEqual(d.turmas, ['X', 'Y']);
   assert.equal(d.meta, 90);
   assert.deepEqual(d.emails, []);
+});
+
+test('Date lido no fuso da planilha, não fixo em São Paulo', () => {
+  const linha = Array(22).fill('');
+  linha[m.nome] = 'Teste';
+  linha[m.nascimento] = new Date('2015-05-05T00:00:00Z'); // meia-noite numa planilha em UTC
+  assert.equal(P.linhaParaAluno(linha, m, 2, 'Etc/UTC').nascimento, '2015-05-05');
+});
+
+test('Última atualização gravada como texto exato (sem conversão pelo Sheets)', () => {
+  const l = P.alunoParaLinha(alunoFicticio, m, 22, '05/11/2026 10:00:00');
+  assert.equal(l[m.ultimaAtualizacao], "'05/11/2026 10:00:00");
 });

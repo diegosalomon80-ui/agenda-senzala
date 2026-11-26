@@ -49,3 +49,15 @@ test('emergência sempre obrigatória e telefone inválido conta como faltando',
 test('contarCompletos', () => {
   assert.equal(R.contarCompletos([base, { ...base, nome: '' }], hoje), 1);
 });
+
+test('idade não depende do formato de texto do Intl (usa formatToParts)', () => {
+  const proto = Intl.DateTimeFormat.prototype;
+  const original = Object.getOwnPropertyDescriptor(proto, 'format');
+  Object.defineProperty(proto, 'format', { configurable: true, get: () => () => '11/26/2026' });
+  try {
+    assert.equal(R.idadeEm('2008-11-27', hoje), 17);
+    assert.equal(R.ehMenor('2015-05-05', hoje), true);
+  } finally {
+    Object.defineProperty(proto, 'format', original);
+  }
+});
