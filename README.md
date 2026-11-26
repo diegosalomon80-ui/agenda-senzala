@@ -39,14 +39,14 @@ Faça estes passos com a **conta Google dona da planilha oficial**.
 ### 1.1 Repositório e GitHub Pages
 1. Crie um repositório no GitHub e envie este projeto (`git push`).
 2. No GitHub, abra **Settings → Pages → Build and deployment → Source** e escolha **GitHub Actions**.
-3. A cada `push` na branch `main`, os testes rodam e o app é publicado em `https://SEU-USUARIO.github.io/NOME-DO-REPO/`.
+3. A cada `push` na branch `main`, os testes rodam e o app é publicado em **https://agenda.senzalalondrina.com** (domínio próprio: registro CNAME `agenda` → `diegosalomon80-ui.github.io` na Cloudflare, com a nuvem **cinza / Somente DNS**; configurado em *Settings → Pages → Custom domain*, com *Enforce HTTPS* ligado).
 
 ### 1.2 Login do Google (Client ID)
 1. Abra o [Google Cloud Console](https://console.cloud.google.com/) e crie um projeto, por exemplo "Agenda Senzala". **Não ative faturamento.**
 2. Em **APIs e serviços → Tela de permissão OAuth**, escolha tipo **Externo**, informe o nome "Agenda Senzala Londrina" e o seu e-mail. Os escopos ficam só os básicos (e-mail e perfil).
    - Se o app ficar em modo **Teste**, adicione os e-mails dos três professores em **Usuários de teste**.
 3. Em **Credenciais → Criar credenciais → ID do cliente OAuth**, escolha o tipo **Aplicativo da Web**.
-   - **Origens JavaScript autorizadas:** `https://SEU-USUARIO.github.io` e `http://localhost:8080` (para testes no computador).
+   - **Origens JavaScript autorizadas:** `https://agenda.senzalalondrina.com`, `https://diegosalomon80-ui.github.io` e `http://localhost:8080` (para testes no computador).
 4. Copie o **ID do cliente** (termina em `.apps.googleusercontent.com`). Ele é público e não é segredo.
 
 ### 1.3 API no Apps Script
