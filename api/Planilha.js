@@ -65,7 +65,7 @@ function alunoParaLinha(aluno, mapa, totalColunas, carimbo) {
   for (var i = 0; i < totalColunas; i++) linha.push('');
   CAMPOS_ALUNO.forEach(function (campo) { linha[mapa[campo]] = textoSeguro_(aluno[campo]); });
   if (aluno.nascimento) linha[mapa.nascimento] = "'" + aluno.nascimento;
-  linha[mapa.ultimaAtualizacao] = "'" + carimbo; // texto exato; impede o Sheets de reinterpretar dia/mês
+  linha[mapa.ultimaAtualizacao] = carimbo; // Date, como o script do site grava
   linha[mapa.origem] = ORIGEM_APP;
   linha[mapa.situacao] = SITUACAO_APP;
   return linha;
@@ -94,7 +94,7 @@ function anexarAluno(aluno) {
   var aba = abaAlunos_();
   var cabecalhos = aba.getRange(1, 1, 1, aba.getLastColumn()).getValues()[0];
   var mapa = mapearCabecalhos(cabecalhos);
-  var carimbo = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm:ss');
+  var carimbo = new Date();
   aba.appendRow(alunoParaLinha(aluno, mapa, cabecalhos.length, carimbo));
   return aba.getLastRow();
 }

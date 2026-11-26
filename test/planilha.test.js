@@ -50,11 +50,10 @@ test('Date do Sheets vira AAAA-MM-DD sem deslocar dia', () => {
 });
 
 test('alunoParaLinha preenche só o permitido', () => {
-  const l = P.alunoParaLinha(alunoFicticio, m, 22, '26/11/2026 10:00:00');
+  const l = P.alunoParaLinha(alunoFicticio, m, 22, new Date('2026-11-26T13:00:00Z'));
   assert.equal(l.length, 22);
   assert.equal(l[m.origem], 'App professores');
   assert.equal(l[m.situacao], 'Cadastro para confirmar');
-  assert.equal(l[m.ultimaAtualizacao], "'26/11/2026 10:00:00");
   assert.equal(l[idx('Nome completo')], 'Teste da Silva');
   assert.equal(l[idx('Data de nascimento')], "'2015-05-05");
   assert.equal(l[idx('ID do envio do site')], '');
@@ -86,7 +85,9 @@ test('Date lido no fuso da planilha, não fixo em São Paulo', () => {
   assert.equal(P.linhaParaAluno(linha, m, 2, 'Etc/UTC').nascimento, '2015-05-05');
 });
 
-test('Última atualização gravada como texto exato (sem conversão pelo Sheets)', () => {
-  const l = P.alunoParaLinha(alunoFicticio, m, 22, '05/11/2026 10:00:00');
-  assert.equal(l[m.ultimaAtualizacao], "'05/11/2026 10:00:00");
+test('Última atualização gravada como data real, igual ao script do site', () => {
+  const agora = new Date('2026-11-05T13:00:00Z');
+  const l = P.alunoParaLinha(alunoFicticio, m, 22, agora);
+  assert.ok(l[m.ultimaAtualizacao] instanceof Date);
+  assert.equal(l[m.ultimaAtualizacao].getTime(), agora.getTime());
 });
