@@ -110,6 +110,13 @@ function filtrarAlunos(alunos, filtro) {
   }).sort(function (x, y) { return COLLATOR.compare(x.nome, y.nome); });
 }
 
+function resumoProgresso(completos, meta) {
+  return {
+    faltam: Math.max(meta - completos, 0),
+    percentual: meta > 0 ? Math.min(100, Math.round(completos / meta * 100)) : 0
+  };
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     normalizarNome: normalizarNome,
@@ -121,6 +128,7 @@ if (typeof module !== 'undefined') {
     cadastroCompleto: cadastroCompleto,
     contarCompletos: contarCompletos,
     verificarDuplicata: verificarDuplicata,
-    filtrarAlunos: filtrarAlunos
+    filtrarAlunos: filtrarAlunos,
+    resumoProgresso: resumoProgresso
   };
 }

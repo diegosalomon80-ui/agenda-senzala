@@ -37,3 +37,9 @@ test('busca ignora acento e caixa; filtros combinam', () => {
   assert.deepEqual(R.filtrarAlunos([a, b, c], { busca: '  ÁLVA' }).map(x => x.linha), [3]);
   assert.deepEqual(R.filtrarAlunos([a, b, c], { professor: 'Hallwan Santos', turma: 'Academia Pura Vida' }).map(x => x.linha), [4]);
 });
+
+test('resumoProgresso', () => {
+  assert.deepEqual(R.resumoProgresso(16, 84), { faltam: 68, percentual: 19 });
+  assert.deepEqual(R.resumoProgresso(90, 84), { faltam: 0, percentual: 100 });
+  assert.deepEqual(R.resumoProgresso(0, 0), { faltam: 0, percentual: 0 });
+});

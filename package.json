@@ -4,5 +4,8 @@
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
     "sincronizar": "node scripts/sincronizar.js"
+  },
+  "devDependencies": {
+    "jsdom": "^31.0.1"
   }
 }
