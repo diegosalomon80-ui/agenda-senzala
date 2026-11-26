@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/ https://script.google.com https://script.googleusercontent.com; img-src 'self' data: https://*.googleusercontent.com; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#1f4d2b">
+  <title>Agenda Senzala Londrina</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icone-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+  <!-- Login: sobreposição, para não perder o que está na tela quando a sessão expira -->
+  <section id="tela-login" class="sobreposicao" hidden>
+    <div class="login-caixa">
+      <img src="icons/icone-192.png" alt="" class="login-logo" width="96" height="96">
+      <h1>Agenda dos professores</h1>
+      <p class="login-sub">Grupo Senzala Londrina</p>
+      <div id="botao-google"></div>
+      <p id="login-msg" class="msg" role="status"></p>
+    </div>
+  </section>
+
+  <section id="tela-negado" class="sobreposicao" hidden>
+    <div class="login-caixa">
+      <h1>Acesso não autorizado</h1>
+      <p>Esta conta Google não está na lista de professores. Entre com a sua conta de professor ou peça para liberar o acesso.</p>
+      <button type="button" class="botao botao-secundario" data-acao="sair">Sair</button>
+    </div>
+  </section>
+
+  <header class="topo">
+    <h1 class="topo-titulo">Agenda Senzala</h1>
+    <button type="button" class="topo-sair" data-acao="sair">Sair</button>
+  </header>
+
+  <main>
+    <section id="tela-agenda" class="tela" hidden>
+      <button type="button" id="progresso" class="progresso" aria-describedby="progresso-dica">
+        <span class="progresso-texto"><strong id="progresso-completos">–</strong> de <strong id="progresso-meta">–</strong> cadastros completos</span>
+        <span class="progresso-barra" aria-hidden="true"><span id="progresso-preenchido"></span></span>
+        <span id="progresso-faltam" class="progresso-faltam"></span>
+        <span id="progresso-dica" class="progresso-dica">Toque para mudar a meta</span>
+      </button>
+
+      <form id="form-meta" class="form-meta" hidden>
+        <label for="campo-meta">Nova meta de cadastros</label>
+        <div class="linha">
+          <input id="campo-meta" type="number" inputmode="numeric" min="1" max="1000" required>
+          <button type="submit" class="botao">Salvar</button>
+          <button type="button" class="botao botao-secundario" data-acao="cancelar-meta">Cancelar</button>
+        </div>
+        <p id="meta-msg" class="msg" role="status"></p>
+      </form>
+
+      <button type="button" class="botao botao-principal" data-acao="novo">+ Cadastrar próximo aluno</button>
+
+      <div class="filtros">
+        <label class="visualmente-oculto" for="busca">Buscar por nome</label>
+        <input id="busca" type="search" placeholder="Buscar por nome" autocomplete="off">
+        <div class="linha">
+          <label class="filtro"><span>Professor</span><select id="filtro-professor"></select></label>
+          <label class="filtro"><span>Turma</span><select id="filtro-turma"></select></label>
+        </div>
+      </div>
+
+      <p id="agenda-status" class="msg" role="status"></p>
+      <ul id="lista" class="lista"></ul>
+    </section>
+
+    <section id="tela-ficha" class="tela" hidden>
+      <button type="button" class="voltar" data-acao="voltar">‹ Voltar</button>
+      <h2 id="ficha-nome" class="ficha-nome"></h2>
+      <div id="ficha-corpo"></div>
+    </section>
+
+    <section id="tela-cadastro" class="tela" hidden>
+      <button type="button" class="voltar" data-acao="voltar">‹ Voltar</button>
+      <h2>Cadastrar aluno</h2>
+      <form id="form-cadastro" novalidate></form>
+    </section>
+  </main>
+
+  <div id="aviso" class="aviso" role="status" hidden></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/regras.js"></script>
+  <script src="js/sessao.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async></script>
+</body>
+</html>
