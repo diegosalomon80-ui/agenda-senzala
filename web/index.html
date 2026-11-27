@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/ https://script.google.com https://script.googleusercontent.com; img-src 'self' data: https://*.googleusercontent.com; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/ https://script.google.com https://script.googleusercontent.com; img-src 'self' data: https://*.googleusercontent.com; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="theme-color" content="#123a30">
   <title>Agenda Senzala Londrina</title>
@@ -19,7 +19,22 @@
       <img src="icons/icone-192-logo.png" alt="" class="login-logo" width="96" height="96">
       <h1>Agenda dos professores</h1>
       <p class="login-sub">Grupo Senzala Londrina</p>
-      <div id="botao-google"></div>
+      <div id="login-opcoes" class="login-opcoes">
+        <div id="botao-google"></div>
+        <button type="button" id="botao-email" class="botao-login">Entrar com e-mail</button>
+      </div>
+      <form id="form-email" class="login-form" hidden novalidate>
+        <label for="login-email">Seu e-mail de professor</label>
+        <input id="login-email" type="email" autocomplete="email" inputmode="email" required>
+        <button type="submit" id="login-enviar" class="botao botao-principal">Enviar código</button>
+      </form>
+      <form id="form-codigo" class="login-form" hidden novalidate>
+        <label for="login-codigo">Código de 6 números</label>
+        <input id="login-codigo" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required>
+        <button type="submit" id="login-entrar" class="botao botao-principal">Entrar</button>
+        <button type="button" id="login-reenviar" class="botao-link">Pedir outro código</button>
+      </form>
+      <button type="button" id="login-voltar" class="botao-link" hidden>Voltar</button>
       <p id="login-msg" class="msg" role="status"></p>
     </div>
   </section>
@@ -27,7 +42,7 @@
   <section id="tela-negado" class="sobreposicao" hidden>
     <div class="login-caixa">
       <h1>Acesso não autorizado</h1>
-      <p>Esta conta Google não está na lista de professores. Entre com a sua conta de professor ou peça para liberar o acesso.</p>
+      <p>Este e-mail não está na lista de professores. Entre com o seu e-mail de professor ou peça para liberar o acesso.</p>
       <button type="button" class="botao botao-secundario" data-acao="sair">Sair</button>
     </div>
   </section>

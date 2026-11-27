@@ -324,18 +324,18 @@ test('filtros incluem valores que só existem nos dados', async () => {
 // ---------- sessão persistente (sessao.js e api.js reais) ----------
 const { VirtualConsole } = require('jsdom');
 
-function montarReal({ chave, storageQuebrado, responder }) {
+function montarReal({ chave, storageQuebrado, responder, semGoogle }) {
   const html = ler('index.html').replace(/<script[\s\S]*?<\/script>/g, '');
   const w = new JSDOM(html, { runScripts: 'outside-only', url: 'https://agenda.exemplo.test/', virtualConsole: new VirtualConsole() }).window;
   abertas.push(w);
   if (storageQuebrado) Object.defineProperty(w, 'localStorage', { get() { throw new Error('SecurityError'); } });
   else if (chave) w.localStorage.setItem('agenda.sessao', chave);
   const enviados = [];
-  const gis = { proxima: 'idt', callback: null, desligado: false };
+  const gis = { proxima: semGoogle ? null : 'idt', callback: null, desligado: false, botao: null };
   w.google = { accounts: { id: {
     initialize: (cfg) => { gis.callback = cfg.callback; },
-    renderButton: () => {},
-    prompt: () => { setTimeout(() => gis.callback && gis.callback({ credential: gis.proxima }), 0); },
+    renderButton: (el, opcoes) => { gis.botao = opcoes; },
+    prompt: () => { if (gis.proxima) setTimeout(() => gis.callback && gis.callback({ credential: gis.proxima }), 0); },
     disableAutoSelect: () => { gis.desligado = true; }
   } } };
   w.fetch = (url, opts) => {
@@ -352,6 +352,7 @@ function montarReal({ chave, storageQuebrado, responder }) {
 
 const respostaPadrao = (corpo) => {
   if (corpo.acao === 'entrar') return { ok: true, sessao: 'nova-' + corpo.idToken };
+  if (corpo.acao === 'entrarComCodigo') return { ok: true, sessao: 'cod-' + corpo.codigo };
   if (corpo.acao === 'listar') return listar()();
   return { ok: true };
 };
@@ -428,4 +429,119 @@ test('dois pedidos recusados ao mesmo tempo: um só login, e a sessão nova é m
   assert.equal(r2.ok, true);
   assert.equal(enviados.filter((c) => c.acao === 'entrar').length, 1);
   assert.equal(w.localStorage.getItem('agenda.sessao'), 'nova-idt');
+});
+
+// ---------- entrar com e-mail ----------
+const vis = (d, id) => !d.getElementById(id).hidden;
+function enviarForm(w, d, id) { d.getElementById(id).dispatchEvent(new w.Event('submit', { cancelable: true })); }
+
+test('botão do Google menor', async () => {
+  const { gis } = montarReal({ semGoogle: true, responder: respostaPadrao });
+  await esperar();
+  assert.equal(gis.botao.size, 'medium');
+  assert.equal(gis.botao.width, 240);
+});
+
+test('entrar com e-mail: pede código, digita e fica logado', async () => {
+  const { w, d, enviados } = montarReal({ semGoogle: true, responder: respostaPadrao });
+  await esperar();
+  assert.ok(vis(d, 'tela-login'));
+  assert.ok(!vis(d, 'form-email'));
+  d.getElementById('botao-email').click();
+  assert.ok(vis(d, 'form-email'));
+  d.getElementById('login-email').value = 'Prof@Gmail.com ';
+  enviarForm(w, d, 'form-email');
+  await esperar();
+  assert.deepEqual(enviados.find((c) => c.acao === 'pedirCodigo'), { acao: 'pedirCodigo', email: 'prof@gmail.com' });
+  assert.ok(vis(d, 'form-codigo'));
+  assert.equal(d.getElementById('login-msg').textContent,
+    'Se este e-mail estiver liberado, o código chega em instantes. Confira o lixo eletrônico.');
+  d.getElementById('login-codigo').value = '123 456';
+  enviarForm(w, d, 'form-codigo');
+  await esperar();
+  await esperar();
+  assert.deepEqual(enviados.find((c) => c.acao === 'entrarComCodigo'),
+    { acao: 'entrarComCodigo', email: 'prof@gmail.com', codigo: '123456' });
+  assert.equal(w.localStorage.getItem('agenda.sessao'), 'cod-123456');
+  assert.ok(!vis(d, 'tela-login'));
+  assert.equal(enviados.find((c) => c.acao === 'listar').sessao, 'cod-123456');
+});
+
+test('e-mail mal digitado não chama a API', async () => {
+  const { w, d, enviados } = montarReal({ semGoogle: true, responder: respostaPadrao });
+  await esperar();
+  d.getElementById('botao-email').click();
+  d.getElementById('login-email').value = 'prof@';
+  enviarForm(w, d, 'form-email');
+  await esperar();
+  assert.equal(d.getElementById('login-msg').textContent, 'Digite um e-mail válido.');
+  assert.equal(enviados.filter((c) => c.acao === 'pedirCodigo').length, 0);
+});
+
+test('aguarde e codigo_invalido mostram os textos e mantêm a tela', async () => {
+  const { w, d } = montarReal({ semGoogle: true, responder: (corpo) => {
+    if (corpo.acao === 'pedirCodigo' && corpo.email === 'b@x.com') return { ok: false, erro: 'aguarde' };
+    if (corpo.acao === 'entrarComCodigo') return { ok: false, erro: 'codigo_invalido' };
+    return respostaPadrao(corpo);
+  } });
+  await esperar();
+  d.getElementById('botao-email').click();
+  d.getElementById('login-email').value = 'b@x.com';
+  enviarForm(w, d, 'form-email');
+  await esperar();
+  assert.equal(d.getElementById('login-msg').textContent, 'Espere 1 minuto para pedir outro código.');
+  d.getElementById('login-email').value = 'a@x.com';
+  enviarForm(w, d, 'form-email');
+  await esperar();
+  d.getElementById('login-codigo').value = '111111';
+  enviarForm(w, d, 'form-codigo');
+  await esperar();
+  assert.equal(d.getElementById('login-msg').textContent, 'Código errado ou vencido. Confira ou peça outro.');
+  assert.ok(vis(d, 'tela-login'));
+  assert.ok(vis(d, 'form-codigo'));
+  assert.equal(w.localStorage.getItem('agenda.sessao'), null);
+});
+
+test('código de e-mail não autorizado mostra acesso negado', async () => {
+  const { w, d } = montarReal({ semGoogle: true, responder: (corpo) =>
+    (corpo.acao === 'entrarComCodigo' ? { ok: false, erro: 'nao_autorizado' } : respostaPadrao(corpo)) });
+  await esperar();
+  d.getElementById('botao-email').click();
+  d.getElementById('login-email').value = 'a@x.com';
+  enviarForm(w, d, 'form-email');
+  await esperar();
+  d.getElementById('login-codigo').value = '123456';
+  enviarForm(w, d, 'form-codigo');
+  await esperar();
+  assert.ok(vis(d, 'tela-negado'));
+});
+
+test('toque duplo em Entrar envia um pedido só', async () => {
+  const { w, d, enviados } = montarReal({ semGoogle: true, responder: respostaPadrao });
+  await esperar();
+  d.getElementById('botao-email').click();
+  d.getElementById('login-email').value = 'a@x.com';
+  enviarForm(w, d, 'form-email');
+  enviarForm(w, d, 'form-email');
+  await esperar();
+  assert.equal(enviados.filter((c) => c.acao === 'pedirCodigo').length, 1);
+  d.getElementById('login-codigo').value = '123456';
+  enviarForm(w, d, 'form-codigo');
+  enviarForm(w, d, 'form-codigo');
+  await esperar();
+  assert.equal(enviados.filter((c) => c.acao === 'entrarComCodigo').length, 1);
+});
+
+test('voltar mostra de novo os dois botões', async () => {
+  const { w, d } = montarReal({ semGoogle: true, responder: respostaPadrao });
+  await esperar();
+  d.getElementById('botao-email').click();
+  d.getElementById('login-email').value = 'a@x.com';
+  enviarForm(w, d, 'form-email');
+  await esperar();
+  d.getElementById('login-voltar').click();
+  assert.ok(vis(d, 'login-opcoes'));
+  assert.ok(!vis(d, 'form-email'));
+  assert.ok(!vis(d, 'form-codigo'));
+  assert.equal(d.getElementById('login-msg').textContent, '');
 });

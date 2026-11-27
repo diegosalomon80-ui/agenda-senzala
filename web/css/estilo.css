@@ -179,7 +179,20 @@ input:focus, select:focus { border-color: var(--verde); }
 .login-caixa h1 { margin: .75rem 0 .25rem; }
 .login-logo { border-radius: 50%; }
 .login-sub { margin: 0 0 1.5rem; color: var(--dourado); font-size: 1.1rem; }
-#botao-google { display: flex; justify-content: center; min-height: 44px; }
+.login-opcoes { display: flex; flex-direction: column; align-items: center; gap: .75rem; }
+#botao-google { display: flex; justify-content: center; min-height: 32px; max-height: 44px; overflow: hidden; }
+.botao-login {
+  width: 240px; height: 32px; border: 1px solid var(--papel); border-radius: 999px;
+  background: transparent; color: var(--papel); font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer;
+}
+.login-form { display: flex; flex-direction: column; gap: .6rem; max-width: 16rem; margin: 0 auto; text-align: left; }
+.login-form input { min-height: var(--toque); padding: 0 .75rem; border: 0; border-radius: var(--raio); font: inherit; font-size: 1.05rem; }
+#login-codigo { letter-spacing: .3em; text-align: center; font-size: 1.3rem; }
+.botao-link {
+  min-height: var(--toque); padding: 0; border: 0; background: none; color: var(--dourado);
+  font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline;
+}
+.botao-link:disabled { opacity: .45; }
 .sobreposicao .botao-secundario { color: var(--papel); border-color: var(--papel); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
