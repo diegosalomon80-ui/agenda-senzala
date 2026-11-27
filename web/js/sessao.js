@@ -105,6 +105,8 @@ var Sessao = (function () {
         $('login-codigo').focus();
       } else if (r.erro === 'aguarde') {
         $('login-msg').textContent = 'Espere 1 minuto para pedir outro código.';
+      } else if (r.erro === 'limite') {
+        $('login-msg').textContent = 'Muitos códigos pedidos. Tente de novo mais tarde.';
       } else if (r.erro === 'dados_invalidos') {
         $('login-msg').textContent = 'Digite um e-mail válido.';
       } else {

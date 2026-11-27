@@ -28,6 +28,7 @@ Aproveitando a mexida, o botão do Google fica menor e mais bonito.
 - No máximo **5 tentativas erradas**; na 5ª o código é descartado.
 - Novo pedido para o mesmo e-mail só depois de **1 minuto** (erro `aguarde`).
 - Pedir um código novo invalida o anterior.
+- No máximo 5 pedidos a cada 6 h por e-mail (erro `limite`); espera e limite valem também para e-mails fora da lista (revisão).
 - Ao acertar, a lista de e-mails é conferida de novo e a sessão é criada (`criarSessao`).
 - O e-mail sai pela conta dona da API/planilha (MailApp, cota grátis ~100/dia).
   Assunto: "Seu código da Agenda Senzala". Corpo curto com o código e a validade.

@@ -147,7 +147,7 @@ Depois do primeiro "Entrar com Google", o celular **continua logado até o profe
 
 Quem não tem ou não quer usar conta Google toca em **"Entrar com e-mail"**, digita o e-mail e recebe um **código de 6 números**. Depois disso fica logado até "Sair", igual ao Google.
 - O e-mail precisa estar em `PROFESSORES_EMAILS` (não precisa estar nos usuários de teste do Google Cloud). Para outros e-mails a tela responde igual, mas nada é enviado.
-- O código vale **10 minutos**, aceita **5 tentativas erradas** e só pode ser pedido de novo depois de **1 minuto**.
+- O código vale **10 minutos**, aceita **5 tentativas erradas** e só pode ser pedido de novo depois de **1 minuto** (no máximo 5 códigos a cada 6 horas por e-mail).
 - O e-mail sai da conta dona da API (cota grátis de ~100 e-mails por dia). Na primeira vez pode cair no **lixo eletrônico**.
 - **Instalação (uma vez):** depois do `clasp push`, no editor do Apps Script execute **`autorizarEnvioDeEmail`** (em `Ferramentas.gs`) e aceite a permissão de enviar e-mails. Só então reimplante a API.
 

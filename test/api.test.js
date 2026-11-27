@@ -235,7 +235,7 @@ test('pedirCodigo envia para professor da lista e guarda só o hash', () => {
   assert.equal(emails[0].para, 'prof@gmail.com');
   assert.equal(emails[0].assunto, 'Seu código da Agenda Senzala');
   assert.match(emails[0].corpo, /123456/);
-  assert.equal(cache.size, 1);
+  assert.equal([...cache.values()].filter((v) => JSON.parse(v).h).length, 1);
   for (const [k, v] of cache) { assert.ok(!k.includes('123456') && !v.includes('123456')); assert.ok(!k.includes('prof@')); }
 });
 
@@ -249,7 +249,7 @@ test('pedirCodigo para e-mail fora da lista responde ok e não envia', () => {
   const { deps, emails, cache } = comCodigo();
   assert.deepEqual(pedir(deps, 'estranho@hotmail.com'), { ok: true });
   assert.equal(emails.length, 0);
-  assert.equal(cache.size, 0);
+  assert.equal([...cache.values()].filter((v) => JSON.parse(v).h).length, 0, 'nenhum código guardado');
 });
 
 test('pedirCodigo com e-mail mal formado', () => {
@@ -341,4 +341,29 @@ test('entrarComCodigo confere dentro da trava', () => {
   pedir(deps, 'prof@gmail.com');
   entrarCod(deps, 'prof@gmail.com', '000000');
   assert.ok(locks() >= 1);
+});
+
+test('5 erros e pedido imediato: aguarde (não zera a espera)', () => {
+  const { deps, emails } = comCodigo();
+  pedir(deps, 'prof@gmail.com');
+  for (let i = 0; i < 5; i++) entrarCod(deps, 'prof@gmail.com', '000000');
+  assert.deepEqual(pedir(deps, 'prof@gmail.com'), { ok: false, erro: 'aguarde' });
+  assert.equal(emails.length, 1);
+});
+
+test('e-mail fora da lista também recebe aguarde no 2º pedido (não revela quem é professor)', () => {
+  const { deps, emails } = comCodigo();
+  assert.deepEqual(pedir(deps, 'estranho@hotmail.com'), { ok: true });
+  assert.deepEqual(pedir(deps, 'estranho@hotmail.com'), { ok: false, erro: 'aguarde' });
+  assert.equal(emails.length, 0);
+  assert.deepEqual(entrarCod(deps, 'estranho@hotmail.com', '123456'), { ok: false, erro: 'codigo_invalido' });
+});
+
+test('no máximo 5 códigos a cada 6 h por e-mail, igual para quem está ou não na lista', () => {
+  for (const email of ['prof@gmail.com', 'estranho@hotmail.com']) {
+    const { deps, emails, avancar } = comCodigo();
+    for (let i = 0; i < 5; i++) { assert.deepEqual(pedir(deps, email), { ok: true }); avancar(61); }
+    assert.deepEqual(pedir(deps, email), { ok: false, erro: 'limite' });
+    assert.equal(emails.length, email === 'prof@gmail.com' ? 5 : 0);
+  }
 });

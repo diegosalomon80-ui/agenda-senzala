@@ -77,6 +77,8 @@ function acaoDefinirMeta_(corpo, deps) {
 var CODIGO_VALIDADE_MS = 10 * 60 * 1000;
 var CODIGO_INTERVALO_MS = 60 * 1000;
 var CODIGO_TENTATIVAS = 5;
+var CODIGO_POR_JANELA = 5;               // pedidos de código por e-mail...
+var CODIGO_JANELA_MS = 6 * 60 * 60 * 1000; // ...a cada 6 h (limite do CacheService)
 var EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function emailDe_(bruto) {
@@ -93,22 +95,33 @@ function lerCodigo_(chave, deps) {
   try { return JSON.parse(valor); } catch (e) { return null; }
 }
 
-// Responde igual para e-mail fora da lista: não revela quem é professor.
+// Espera, limite e respostas iguais para e-mail fora da lista: não revela quem é professor.
 function acaoPedirCodigo_(corpo, deps) {
   var email = emailDe_(corpo.email);
   if (!EMAIL_VALIDO.test(email)) return invalido_(['email']);
-  if (deps.config().emails.indexOf(email) === -1) return { ok: true };
   return deps.comLock(function () {
     var chave = chaveCodigo_(email, deps);
+    var chaveDia = 'codDia:' + deps.sha256(email);
     var agora = deps.agora().getTime();
     var atual = lerCodigo_(chave, deps);
     if (atual && agora - atual.e < CODIGO_INTERVALO_MS) return { ok: false, erro: 'aguarde' };
+    var dia = lerCodigo_(chaveDia, deps);
+    if (!dia || agora - dia.desde > CODIGO_JANELA_MS) dia = { n: 0, desde: agora };
+    if (dia.n >= CODIGO_POR_JANELA) return { ok: false, erro: 'limite' };
+    if (deps.config().emails.indexOf(email) === -1) {
+      deps.cache.put(chave, JSON.stringify({ e: agora }), 600);   // marca a espera, sem código
+      dia.n += 1;
+      deps.cache.put(chaveDia, JSON.stringify(dia), 21600);
+      return { ok: true };
+    }
     var codigo = deps.gerarCodigo();
     deps.enviarEmail(email, 'Seu código da Agenda Senzala',
       'Seu código para entrar na Agenda Senzala: ' + codigo +
       '\n\nEle vale por 10 minutos. Se você não pediu, ignore este e-mail.');
     // Só guarda depois do envio: se falhar, dá para pedir de novo na hora.
     deps.cache.put(chave, JSON.stringify({ h: deps.sha256(codigo), t: 0, e: agora }), 600);
+    dia.n += 1;
+    deps.cache.put(chaveDia, JSON.stringify(dia), 21600);
     return { ok: true };
   });
 }
@@ -120,11 +133,15 @@ function acaoEntrarComCodigo_(corpo, deps) {
   var certo = deps.comLock(function () {
     var chave = chaveCodigo_(email, deps);
     var atual = lerCodigo_(chave, deps);
-    if (!atual || deps.agora().getTime() - atual.e > CODIGO_VALIDADE_MS) return false;
-    if (atual.h === deps.sha256(codigo)) { deps.cache.remove(chave); return true; }
-    atual.t += 1;
-    if (atual.t >= CODIGO_TENTATIVAS) deps.cache.remove(chave);
-    else deps.cache.put(chave, JSON.stringify(atual), 600);
+    if (!atual || !atual.h || atual.t >= CODIGO_TENTATIVAS) return false;
+    if (deps.agora().getTime() - atual.e > CODIGO_VALIDADE_MS) return false;
+    if (atual.h === deps.sha256(codigo)) {
+      // Troca o código por uma marca de espera: o próximo pedido continua sujeito ao 1 minuto.
+      deps.cache.put(chave, JSON.stringify({ e: atual.e }), 600);
+      return true;
+    }
+    atual.t += 1;   // esgotado continua guardado (com a hora do envio) para manter a espera
+    deps.cache.put(chave, JSON.stringify(atual), 600);
     return false;
   });
   if (!certo) return { ok: false, erro: 'codigo_invalido' };

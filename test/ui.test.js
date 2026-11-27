@@ -545,3 +545,14 @@ test('voltar mostra de novo os dois botões', async () => {
   assert.ok(!vis(d, 'form-codigo'));
   assert.equal(d.getElementById('login-msg').textContent, '');
 });
+
+test('limite de pedidos mostra a mensagem', async () => {
+  const { w, d } = montarReal({ semGoogle: true, responder: (corpo) =>
+    (corpo.acao === 'pedirCodigo' ? { ok: false, erro: 'limite' } : respostaPadrao(corpo)) });
+  await esperar();
+  d.getElementById('botao-email').click();
+  d.getElementById('login-email').value = 'a@x.com';
+  enviarForm(w, d, 'form-email');
+  await esperar();
+  assert.equal(d.getElementById('login-msg').textContent, 'Muitos códigos pedidos. Tente de novo mais tarde.');
+});
