@@ -50,6 +50,13 @@ function derrubarTodasAsSessoes() {
   return chaves.length;
 }
 
+// Rode uma vez no editor depois de instalar o login por e-mail: pede a permissão de enviar e-mails.
+function autorizarEnvioDeEmail() {
+  var restantes = MailApp.getRemainingDailyQuota();
+  console.log('Envio de e-mail liberado. Códigos que ainda dá para mandar hoje: ' + restantes);
+  return restantes;
+}
+
 if (typeof module !== 'undefined') {
   module.exports = { dadosPlanilhaTeste: dadosPlanilhaTeste };
 }

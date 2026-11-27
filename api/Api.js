@@ -73,6 +73,64 @@ function acaoDefinirMeta_(corpo, deps) {
   return { ok: true, meta: meta };
 }
 
+// ---------- login por código de e-mail ----------
+var CODIGO_VALIDADE_MS = 10 * 60 * 1000;
+var CODIGO_INTERVALO_MS = 60 * 1000;
+var CODIGO_TENTATIVAS = 5;
+var EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function emailDe_(bruto) {
+  return typeof bruto === 'string' ? bruto.trim().toLowerCase() : '';
+}
+
+function chaveCodigo_(email, deps) {
+  return 'cod:' + deps.sha256(email);
+}
+
+function lerCodigo_(chave, deps) {
+  var valor = deps.cache.get(chave);
+  if (!valor) return null;
+  try { return JSON.parse(valor); } catch (e) { return null; }
+}
+
+// Responde igual para e-mail fora da lista: não revela quem é professor.
+function acaoPedirCodigo_(corpo, deps) {
+  var email = emailDe_(corpo.email);
+  if (!EMAIL_VALIDO.test(email)) return invalido_(['email']);
+  if (deps.config().emails.indexOf(email) === -1) return { ok: true };
+  return deps.comLock(function () {
+    var chave = chaveCodigo_(email, deps);
+    var agora = deps.agora().getTime();
+    var atual = lerCodigo_(chave, deps);
+    if (atual && agora - atual.e < CODIGO_INTERVALO_MS) return { ok: false, erro: 'aguarde' };
+    var codigo = deps.gerarCodigo();
+    deps.enviarEmail(email, 'Seu código da Agenda Senzala',
+      'Seu código para entrar na Agenda Senzala: ' + codigo +
+      '\n\nEle vale por 10 minutos. Se você não pediu, ignore este e-mail.');
+    // Só guarda depois do envio: se falhar, dá para pedir de novo na hora.
+    deps.cache.put(chave, JSON.stringify({ h: deps.sha256(codigo), t: 0, e: agora }), 600);
+    return { ok: true };
+  });
+}
+
+function acaoEntrarComCodigo_(corpo, deps) {
+  var email = emailDe_(corpo.email);
+  var codigo = String(corpo.codigo == null ? '' : corpo.codigo).replace(/\D/g, '');
+  if (!EMAIL_VALIDO.test(email) || codigo.length !== 6) return { ok: false, erro: 'codigo_invalido' };
+  var certo = deps.comLock(function () {
+    var chave = chaveCodigo_(email, deps);
+    var atual = lerCodigo_(chave, deps);
+    if (!atual || deps.agora().getTime() - atual.e > CODIGO_VALIDADE_MS) return false;
+    if (atual.h === deps.sha256(codigo)) { deps.cache.remove(chave); return true; }
+    atual.t += 1;
+    if (atual.t >= CODIGO_TENTATIVAS) deps.cache.remove(chave);
+    else deps.cache.put(chave, JSON.stringify(atual), 600);
+    return false;
+  });
+  if (!certo) return { ok: false, erro: 'codigo_invalido' };
+  return { ok: true, sessao: deps.criarSessao(autorizarEmail(email, deps.config().emails)) };
+}
+
 var ACOES_ = { listar: acaoListar_, cadastrar: acaoCadastrar_, definirMeta: acaoDefinirMeta_ };
 
 // Sessão guardada no app (preferida) ou ID token do Google. A lista de e-mails vale sempre.
@@ -94,6 +152,8 @@ function tratarRequisicao(corpo, deps) {
     }
     // Sessão nova só com login do Google: uma sessão não gera cópias que sobrevivam ao "Sair".
     if (corpo.acao === 'entrar') return { ok: true, sessao: deps.criarSessao(deps.verificarProfessor(corpo.idToken)) };
+    if (corpo.acao === 'pedirCodigo') return acaoPedirCodigo_(corpo, deps);
+    if (corpo.acao === 'entrarComCodigo') return acaoEntrarComCodigo_(corpo, deps);
     identificar_(corpo, deps);
     var acao = ACOES_[corpo.acao];
     if (!acao || !Object.prototype.hasOwnProperty.call(ACOES_, corpo.acao)) return invalido_(['acao']);
@@ -120,6 +180,22 @@ function depsReais_() {
       lock.waitLock(10000);
       try { return fn(); } finally { lock.releaseLock(); }
     },
+    cache: (function () {
+      var c = CacheService.getScriptCache();
+      return {
+        get: function (k) { return c.get(k); },
+        put: function (k, v, seg) { c.put(k, v, seg); },
+        remove: function (k) { c.remove(k); }
+      };
+    })(),
+    enviarEmail: function (para, assunto, corpo) {
+      MailApp.sendEmail({ to: para, subject: assunto, body: corpo, name: 'Agenda Senzala' });
+    },
+    gerarCodigo: function () {
+      var n = parseInt(Utilities.getUuid().replace(/-/g, '').slice(0, 12), 16) % 1000000;
+      return ('000000' + n).slice(-6);
+    },
+    sha256: hashToken_,
     agora: function () { return new Date(); },
     hash: function (s) {
       return Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, s, Utilities.Charset.UTF_8)
