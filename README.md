@@ -143,6 +143,14 @@ Depois do primeiro "Entrar com Google", o celular **continua logado até o profe
 - **Celular perdido ou emergência:** no editor do Apps Script, abra `Ferramentas.gs`, escolha a função **`derrubarTodasAsSessoes`** e clique em **Executar**. Todos os professores vão precisar entrar de novo.
 - **iPhone:** use o app **instalado na Tela de Início**. Se for usado só numa aba do Safari, o próprio iPhone pode apagar o login depois de cerca de 7 dias sem uso.
 
+### Entrar com e-mail (sem conta Google)
+
+Quem não tem ou não quer usar conta Google toca em **"Entrar com e-mail"**, digita o e-mail e recebe um **código de 6 números**. Depois disso fica logado até "Sair", igual ao Google.
+- O e-mail precisa estar em `PROFESSORES_EMAILS` (não precisa estar nos usuários de teste do Google Cloud). Para outros e-mails a tela responde igual, mas nada é enviado.
+- O código vale **10 minutos**, aceita **5 tentativas erradas** e só pode ser pedido de novo depois de **1 minuto**.
+- O e-mail sai da conta dona da API (cota grátis de ~100 e-mails por dia). Na primeira vez pode cair no **lixo eletrônico**.
+- **Instalação (uma vez):** depois do `clasp push`, no editor do Apps Script execute **`autorizarEnvioDeEmail`** (em `Ferramentas.gs`) e aceite a permissão de enviar e-mails. Só então reimplante a API.
+
 ## 5. Mudar listas de professores ou turmas
 
 Edite `PROFESSORES_NOMES` ou `TURMAS`, com os nomes separados por `|`. Use exatamente a mesma grafia que aparece na planilha, porque os filtros comparam o texto exato.
